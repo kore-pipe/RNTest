@@ -36,6 +36,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "b01b8e31-aad2-4e13-960f-377700d55cd7"
+      }
+    },
+    "owner": "dongke"
   }
 }
