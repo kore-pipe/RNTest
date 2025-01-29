@@ -1,0 +1,75 @@
+name: Expo Build and Release
+
+on:
+  push:
+    branches:
+      - main # 设置触发的分支，例如 main 或 develop
+
+jobs:
+  build-and-release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+
+      - name: Check for EXPO_TOKEN
+        run: |
+          if [ -z "${{ secrets.EXPO_TOKEN }}" ]; then
+            echo "You must provide an EXPO_TOKEN secret linked to this project's Expo account in this repo's secrets. Learn more: https://docs.expo.dev/eas-update/github-actions"
+            exit 1
+          fi
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 确保获取所有提交记录
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Install jq
+        run: npm install -g jq
+
+      - name: Build Android
+        run: npx eas build --platform android --non-interactive --profile production
+
+      - name: Download Android Artifact
+        run: |
+          # 下载构建产物到本地目录
+          BUILD_ARTIFACT_URL=$(eas build:list --platform android --limit 1 --json --non-interactive | jq '.[0].artifacts.buildUrl')
+          curl -L -o ./android-artifact/app.aab $BUILD_ARTIFACT_URL
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Android Artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./android-artifact/app.aab
+          asset_name: app.aab
+          asset_content_type: application/octet-stream
