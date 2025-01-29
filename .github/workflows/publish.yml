@@ -40,7 +40,7 @@ jobs:
 
       - name: Install EAS CLI
         run: npm install -g eas-cli
-q
+
       - name: Install jq
         run: sudo apt-get install -y jq
 
